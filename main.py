@@ -7,20 +7,16 @@ class Network:
         self.num_layers = len(sizes)  # Number of layers in neural network
         self.sizes = sizes
 
-        '''
-        Creates a list of column vectors that holds the biases 
-        for each neuron in the layers after the input layer.
-        The input layer does not have biases in a neural network.
-        We use np.random.randn because if the range is too extreme
-        network will become stuck, as the sigmond function will
-        will be too far from 0 to shift from 0 to 1 or vise versa.
-        '''
+        # Creates a list of column vectors that holds the biases 
+        # for each neuron in the layers after the input layer.
+        # The input layer does not have biases in a neural network.
+        # We use np.random.randn because if the range is too extreme
+        # network will become stuck, as the sigmond function will
+        # will be too far from 0 to shift from 0 to 1 or vise versa.
         self.biases = [np.random.randn(y, 1) for y in sizes[1:]]
 
-        '''
-        Makes a list of matrices that holds the weights for each neuron.
-        Each column in each matrix represent the weights of 1 input neuron.
-        '''
+        # Makes a list of matrices that holds the weights for each neuron.
+        # Each column in each matrix represent the weights of 1 input neuron.
         self.weights = [np.random.randn(x, y) for x, y in zip(sizes[1:], sizes[:-1])]
 
     # Returns a vector of outputs given a vector of inputs
@@ -28,14 +24,12 @@ class Network:
         for w, b in zip(self.weights, self.biases):
             a = sigmoid(np.dot(w, a) + b)
         return a
-    
-    '''
-    Does the initial stages of creating a neural network (i.e.
-    shuffles the training data for prepare for mini batches,
-    creates mini-batches, prints accuracy of the network).
-    '''
+
     def initiate_SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
         '''
+        Does the initial stages of creating a neural network (i.e.
+        shuffles the training data for prepare for mini batches,
+        creates mini-batches, prints accuracy of the network). 
         training_data is a list of tuples "(x, y)" representing training inputs
         and their expected outputs with x being an array of the pixels
         a training image, and y being a vector of the expected output.
@@ -62,10 +56,85 @@ class Network:
                 print("epoch {0}: complete".format())
 
     def update_mini_batch(self, mini_batch, eta):
-        pass
+        # Creates an empty matrix that will hold the partial
+        # derivatives of the parameters. The matrix's dimensions
+        # are equal to the dimensions defined in the initization
+        # function of the class.
+        gradient_b = [np.zeros(b.shape) for b in self.biases]
+        gradient_w = [np.zeros(w.shape) for w in self.weights]
+
+        for x, y in mini_batch:
+            # Returns you partial C/partial b or w
+            partial_b, partial_w = self.backprop(x, y)
+
+            # Updates the empty matrix with the new partial derivatives.
+            # Each element represents the rate of change of cost with 
+            # respect to the parameter.
+            gradient_b = [gb + pb for gb, pb in zip(gradient_b, partial_b)]
+            gradient_w = [gw + pw for gw, pw in zip(gradient_w, partial_w)]
+
+         
+        # Updates each bias/weight with the new partial, making the 
+        # gradient vector for the current mini batch more accurate.
+        self.biases = [curr_bias - eta/len(mini_batch) * gb
+                    for curr_bias, gb in zip(self.biases, gradient_b)]
+        self.weights = [curr_weight - eta/len(mini_batch) * gradient_w
+                        for curr_weight, gw in zip(self.weights, gradient_w)]
+
+    def backprop(self, x, y):
+        gradient_b = [np.zeros(b.shape) for b in self.biases] 
+        gradient_w = [np.zeros(w.shape) for w in self.weights]
+
+        # Feedforward
+        a = x  # array of input pixels acts as the activations of input layer
+        activations = [a]  # Stores activations, layer by layer
+        z_list = []  # Stores weighted inputs z, layer by layer
+
+        # Computes the activation and weighted input layer by layer
+        for bias, weight in zip(self.biases, self.weights):
+            z = np.dot(weight, a) + bias  # Dot products the weight matrix and activation vector, then add bias vector
+            a = sigmoid(z)  # Converts weighted input vector into activation vector
+            z_list.append(z)  # Appends layer of weighted inputs for later calculating error
+            activations.append(a)  # Appends layer of activations
+
+        # Based off BP1 equation
+        # Returns you the error of the output layer
+        delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(z_list[-1])
+
+        # Based off BP3 equation
+        # Partial C/partial b of output layer
+        gradient_b[-1] = delta
+
+        # Based off BP4 equation
+        # Requires transpose due to matrix multiplication rules
+        # Partial C/partial w of output layer
+        gradient_w[-1] = np.dot(delta, activations[-2].transpose())
+
+        # Based off BP2 equation
+        # Backwards pass the error
+        # l represents the current layer of calculation.
+        # l starts at 2 because it's the layer before the output layer
+        # As l increases, the layers go down/backwards
+        for l in (2, len(self.num_layers)):
+            z = z_list[-l]
+            sp = sigmoid_prime(z)
+            delta = np.dot(gradient_w[-l+1].transpose(), activations[-l+1]) * sp
+
+            # partial C/ partial b or w of non-output layers
+            gradient_b[-l] = delta
+            gradient_w[-l] = np.dot(delta, activations[-l-1].transpose())
+        return (gradient_b, gradient_w)
+
+    def cost_derivative(self, output_activations, y):
+        '''
+        Returns a vector of partial derivatives of cost C
+        with respect to a, which is the output layer's activations 
+        '''
+        return (output_activations - y)
 
 
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
-
+def sigmoid_prime(z):
+    return sigmoid(z)*(1-sigmoid(z))
