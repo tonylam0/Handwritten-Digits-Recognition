@@ -80,7 +80,7 @@ class Network:
         # Updates each bias/weight with the average of the gradient vectors
         self.biases = [curr_bias - eta/len(mini_batch) * gb
                     for curr_bias, gb in zip(self.biases, gradient_b)]
-        self.weights = [curr_weight - eta/len(mini_batch) * gradient_w
+        self.weights = [curr_weight - eta/len(mini_batch) * gw
                         for curr_weight, gw in zip(self.weights, gradient_w)]
 
     def backprop(self, x, y):
@@ -121,10 +121,10 @@ class Network:
         # l represents the current layer of calculation
         # l starts at 2 because it's the layer before the output layer
         # As l increases, the layers go down/backwards
-        for l in (2, len(self.num_layers)):
+        for l in range(2, self.num_layers):
             z = z_list[-l]
             sp = sigmoid_prime(z)
-            delta = np.dot(gradient_w[-l+1].transpose(), activations[-l+1]) * sp
+            delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
 
             # partial C/ partial b or w of non-output layers
             gradient_b[-l] = delta
@@ -143,13 +143,10 @@ class Network:
         Returns the total number of test inputs for which the neural
         network outputs the correct result.
         '''
-        test_results = []
-        for (x, y) in test_data:
-            # Appends the neural network's output number/guess.
-            # The neural network's output is the neuron with 
-            # the highest activation out of the output layer's vector.
-            test_results.append(np.argmax(self.feedforward(x)), y)
-        
+        # Appends the neural network's output number/guess.
+        # The neural network's output is the neuron with 
+        # the highest activation out of the output layer's vector.
+        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
         
 
