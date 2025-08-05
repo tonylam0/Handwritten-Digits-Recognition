@@ -19,7 +19,8 @@ class Network:
         # Each column in each matrix represent the weights of 1 input neuron.
         self.weights = [np.random.randn(x, y) for x, y in zip(sizes[1:], sizes[:-1])]
 
-    # Returns a vector of outputs given a vector of inputs
+    # Returns a vector of the output activations given the activations of the 
+    # input layer. It is fed forward layer by layer.
     def feedforward(self, a):
         for w, b in zip(self.weights, self.biases):
             a = sigmoid(np.dot(w, a) + b)
@@ -35,8 +36,8 @@ class Network:
         a training image, and y being a vector of the expected output.
         '''
         if test_data:
-            n_test = len(test_data)
-        n = len(training_data)
+            n_test = len(test_data)  # Number of test images
+        n = len(training_data)  # Number of training images
 
         for i in range(epochs):
             random.shuffle(training_data)
@@ -49,6 +50,7 @@ class Network:
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             
+            # Used to track the accuracy of the neural network
             if test_data:
                 print("epoch {0}: {1} / {2}".format(
                     i, self.evaluate(test_data), n_test))
@@ -64,24 +66,28 @@ class Network:
         gradient_w = [np.zeros(w.shape) for w in self.weights]
 
         for x, y in mini_batch:
-            # Returns you partial C/partial b or w
+            # Returns you a tuple of (partial_b, partial_w), which
+            # are layer by layer lists of arrays with the partials
+            # of cost function C.
             partial_b, partial_w = self.backprop(x, y)
 
-            # Updates the empty matrix with the new partial derivatives.
-            # Each element represents the rate of change of cost with 
-            # respect to the parameter.
+            # Updates the list of arrays with the new partial derivatives
+            # layer by layer. Each element represents the rate of change
+            # of cost with respect to the parameter.
             gradient_b = [gb + pb for gb, pb in zip(gradient_b, partial_b)]
             gradient_w = [gw + pw for gw, pw in zip(gradient_w, partial_w)]
 
-         
-        # Updates each bias/weight with the new partial, making the 
-        # gradient vector for the current mini batch more accurate.
+        # Updates each bias/weight with the average of the gradient vectors
         self.biases = [curr_bias - eta/len(mini_batch) * gb
                     for curr_bias, gb in zip(self.biases, gradient_b)]
         self.weights = [curr_weight - eta/len(mini_batch) * gradient_w
                         for curr_weight, gw in zip(self.weights, gradient_w)]
 
     def backprop(self, x, y):
+        '''
+        Calculates the gradient for cost C in terms of bias and weight
+        layer by layer.
+        '''
         gradient_b = [np.zeros(b.shape) for b in self.biases] 
         gradient_w = [np.zeros(w.shape) for w in self.weights]
 
@@ -112,7 +118,7 @@ class Network:
 
         # Based off BP2 equation
         # Backwards pass the error
-        # l represents the current layer of calculation.
+        # l represents the current layer of calculation
         # l starts at 2 because it's the layer before the output layer
         # As l increases, the layers go down/backwards
         for l in (2, len(self.num_layers)):
@@ -131,7 +137,21 @@ class Network:
         with respect to a, which is the output layer's activations 
         '''
         return (output_activations - y)
-
+    
+    def evaluate(self, test_data):
+        '''
+        Returns the total number of test inputs for which the neural
+        network outputs the correct result.
+        '''
+        test_results = []
+        for (x, y) in test_data:
+            # Appends the neural network's output number/guess.
+            # The neural network's output is the neuron with 
+            # the highest activation out of the output layer's vector.
+            test_results.append(np.argmax(self.feedforward(x)), y)
+        
+        return sum(int(x == y) for (x, y) in test_results)
+        
 
 def sigmoid(z):
     return 1 / (1 + np.exp(-z))
