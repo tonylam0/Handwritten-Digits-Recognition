@@ -52,8 +52,9 @@ class Network:
             
             # Used to track the accuracy of the neural network
             if test_data:
-                print("epoch {0}: {1} / {2}".format(
-                    i, self.evaluate(test_data), n_test))
+                percent = round(self.evaluate(test_data)/n_test * 100, 2)
+                print("epoch {0}: {1} / {2} | {3}% accuracy".format(
+                    i, self.evaluate(test_data), n_test, percent))
             else:
                 print("epoch {0}: complete".format())
 
